@@ -1,0 +1,5 @@
+.vscode/
+*.o
+affine
+lfsr
+des
