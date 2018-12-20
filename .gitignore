@@ -1,5 +1,3 @@
 .vscode/
 *.o
-affine
-lfsr
-des
+binary
