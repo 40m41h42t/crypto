@@ -16,6 +16,7 @@ private:
   string Key;
   bitset<48> SubKey[15];
   void GenerateKey();
+  bitset<32> F_Function(bitset<32> Block, int round);
   bitset<28> LeftShift(bitset<28> bits, int times);
   bitset<64> String2Bitset(string str);
 };

@@ -44,11 +44,6 @@ bitset<64> String2Bitset(string str);
 
 > DES 整体结构 [^3]
 
- 其中 F 函数的结构如图所示：
-
-![](img/DES-f-function.png)
-
-> F 函数 [^4]
 
 其输出最后再经过逆初始置换（也有称最终置换$IP^{-1}$）得到最终的密文 `CypherText`。
 
@@ -186,6 +181,50 @@ $$
 ```c++
 
 ```
+
+## F_Function()
+
+### 格式
+
+```c++
+bitset<32> F_Function(bitset<32> Block, int round)
+```
+
+### 结构
+
+![](img/DES-f-function.png)
+
+### 功能
+
+输入 32bit 数据和一轮密钥，输出 32bit 数据。
+
+### 处理方式
+
+完成“混淆与扩散”这一过程。
+
+首先通过扩张置换 E 将 32bit 扩展至 48bit。
+
+![](img/des-ee.png)
+
+> https://zh.wikipedia.org/wiki/DES%E8%A1%A5%E5%85%85%E6%9D%90%E6%96%99#%E6%89%A9%E5%BC%A0%E5%87%BD%E6%95%B0_(E%E5%87%BD%E6%95%B0)
+
+接着将其与一轮密钥异或，分成 8 个 6-bit 子块 ：
+$$
+E(Block) \oplus SubKey = B_1B_2B_3B_4B_5B_6B_7B_8
+$$
+$B_i$ 又可以切割如下：
+$$
+B_i=b_1b_2b_3b_4b_5b_6
+$$
+其中，$b_1b_6$ 作为行号，$b_2b_3b_4b_5$ 作为列号，$i$ 作为盒子序号，选中 $S$ 盒中的 4 位数据。
+
+8 个 4 位数据拼接得到 32 位的数据，再通过 P 置换得到最终的 32 位输出。
+
+![](img/des-pp.png)
+
+> https://zh.wikipedia.org/wiki/DES%E8%A1%A5%E5%85%85%E6%9D%90%E6%96%99#P%E7%BD%AE%E6%8D%A2
+
+
 
 # 关于
 
