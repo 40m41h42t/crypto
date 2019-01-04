@@ -5,7 +5,7 @@ using namespace std;
 
 int main()
 {
-    int a[NUM] = {0, 1, 1, 0, 1};
+    int a[NUM] = {1, 1, 1, 1, 1};
     lfsr LFSR(a);
     LFSR.output_demo();
     cout<<endl;

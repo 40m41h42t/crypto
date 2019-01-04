@@ -29,7 +29,7 @@ lfsr::lfsr(string str, int *state, bool isPlain)
 }
 void lfsr::output_demo()
 {
-    // every eight status as one line
+    // every sixteen status as one line
     for (int i = 0; i < MAXROUND * 2; ++i)
     {
         int temp = (status[0] + status[3]) % 2;
@@ -40,7 +40,7 @@ void lfsr::output_demo()
         }
         status[NUM - 1] = temp;
         cout << output << " ";
-        if (i % 16 == 0)
+        if (i % 16 == 15)
         {
             cout << endl;
         }
