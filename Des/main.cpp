@@ -8,20 +8,14 @@ using namespace std;
 
 int main()
 {
-    string input_str = "flag{this-is_4-simp1e-flag}11100010101010";
+    string input_str = "flag{this-is_4-simp1e-flag}";
     uint64_t temp64;
-    // for (int i = 0; i < input_str.length(); i += 8)
-    // {
-    //     temp64 = *(uint64_t *)(input_str.c_str() + i);
-    //     printf("%#llx\n", temp64);
-    // }
-    uint64_t test = 0x9474B8E8C73BCA7D;
-    des ttt;
-    ttt.Calc(test, test, 'e');
-    printf("%#llx\n", ttt.GetPlainText());
-    printf("%#llx\n", ttt.GetCypherText());
-    des tt2;
-    tt2.Calc(ttt.GetCypherText(), test, 'd');
-    printf("%#llx\n", tt2.GetPlainText());
-    printf("%#llx\n", tt2.GetCypherText());
+    uint64_t test = 0x363738393a3b3c3d;
+
+    des ttetst;
+    string ret1 = ttetst.Calc(input_str, test, 'e');
+    cout << "CipherText: " << ret1 << endl;
+    des deggg;
+    string ret2 = deggg.Calc(ret1, test, 'd');
+    cout << "PlainText: " << ret2 << endl;
 }

@@ -1,5 +1,6 @@
 #include "des.hpp"
 #include "global.hpp"
+#include <cstring>
 void des::GenerateKey()
 {
     /* 28 bits */
@@ -96,7 +97,7 @@ uint32_t des::F_func(uint32_t R, int rounds)
     }
     return ret32;
 }
-void des::Calc(uint64_t PlainText, uint64_t Key, char mode)
+uint64_t des::Algorithm(uint64_t TextBits64)
 {
     /* 32 bits */
     uint32_t L = 0, R = 0;
@@ -104,26 +105,18 @@ void des::Calc(uint64_t PlainText, uint64_t Key, char mode)
 
     /* 64 bits */
     uint64_t Bits64 = 0;
-
-    /* initial */
-    this->PlainText = PlainText;
-    this->Key = Key;
-    CypherText = 0;
+    uint64_t ret64 = 0;
 
     /* IP permutation */
-    // Bits[i] = PlainText[IP[i]]
+    // Bits[i] = TextBits[IP[i]]
     for (int i = 0; i < 64; ++i)
     {
         Bits64 <<= 1;
-        Bits64 |= (PlainText >> (64 - IP[i])) & LB64_MASK;
+        Bits64 |= (TextBits64 >> (64 - IP[i])) & LB64_MASK;
     }
     L = (uint32_t)(Bits64 >> 32) & L32_MASK64;
     R = (uint32_t)Bits64 & L32_MASK64;
 
-    /* Generate SubKeys: Lazy condition */
-    GenerateKey();
-
-    /* 16 rounds calculate */
     for (int rounds = 0; rounds < 16; ++rounds)
     {
         // R_{i+1} = L_i ^ f(R_i, SubKey[i+1])
@@ -139,18 +132,31 @@ void des::Calc(uint64_t PlainText, uint64_t Key, char mode)
     Bits64 = ((uint64_t)R) << 32 | (uint64_t)L;
 
     /* PI permutation */
-    // CypherText[i] = Bits64[PI[i]]
+    // ret64[i] = Bits64[PI[i]]
     for (int i = 0; i < 64; ++i)
     {
-        CypherText <<= 1;
-        CypherText |= (Bits64 >> (64 - PI[i])) & LB64_MASK;
+        ret64 <<= 1;
+        ret64 |= (Bits64 >> (64 - PI[i])) & LB64_MASK;
     }
+    return ret64;
 }
-uint64_t des::GetCypherText()
+string des::Calc(string PlainText, uint64_t Key, char mode)
 {
-    return CypherText;
-}
-uint64_t des::GetPlainText()
-{
-    return PlainText;
+    this->PlainText = PlainText;
+    this->Key = Key;
+    GenerateKey();
+    this->mode = mode;
+    uint64_t temp64, ret64;
+    string RetStr;
+    char tempch[8];
+    for (int i = 0; i < PlainText.length(); i += 8)
+    {
+        temp64 = *(uint64_t *)(PlainText.c_str() + i);
+        // printf("%#llx\n", temp64);
+        ret64 = Algorithm(temp64);
+        // printf("%#llx\n", ret64);
+        memcpy(tempch, &ret64, 8);
+        RetStr = RetStr + tempch;
+    }
+    return RetStr;
 }
