@@ -87,7 +87,6 @@ void Affine::encrypt()
             cypher_text = cypher_text + plain_text.at(i);
         }
     }
-    cout << cypher_text << endl;
 }
 void Affine::decrypt()
 {
@@ -116,7 +115,6 @@ void Affine::decrypt()
             plain_text = plain_text + cypher_text.at(i);
         }
     }
-    cout << plain_text << endl;
 }
 string Affine::get_cypher_text()
 {
@@ -134,9 +132,8 @@ WordAnylasis::WordAnylasis(string ctext, string ptext)
     for (int i = 0; i < MOD; ++i)
     {
         alphabet_plain[i] = alphabet_cypher[i] = 'a' + i;
-        num_plain[i] = num_cypher[i] = 0;
-        map_plain[alphabet_plain[i]] = num_plain[i];
-        map_cypher[alphabet_cypher[i]] = num_cypher[i];
+        map_plain[alphabet_plain[i]] = 0;
+        map_cypher[alphabet_cypher[i]] = 0;
     }
 }
 void WordAnylasis::PlainTextAnylasis()
@@ -146,6 +143,10 @@ void WordAnylasis::PlainTextAnylasis()
         if (plain_text.at(i) >= 'a' && plain_text.at(i) <= 'z')
         {
             ++map_plain[plain_text.at(i)];
+        }
+        else if (plain_text.at(i) >= 'A' && plain_text.at(i) <= 'Z')
+        {
+            ++map_plain[plain_text.at(i) - 'A' + 'a'];
         }
     }
 }
@@ -157,24 +158,35 @@ void WordAnylasis::CypherTextAnylasis()
         {
             ++map_cypher[cypher_text.at(i)];
         }
+        if (cypher_text.at(i) >= 'A' && cypher_text.at(i) <= 'Z')
+        {
+            ++map_cypher[cypher_text.at(i) - 'A' + 'a'];
+        }
     }
 }
 void WordAnylasis::Anylasis()
 {
+    stringstream anatable;
+    anatable.clear();
     PlainTextAnylasis();
     CypherTextAnylasis();
-    cout << setw(7) << "|"
+    anatable << setw(7) << "|"
          << "-----plain text-----|-----cypher text----" << endl;
-    cout << "-char-|"
+    anatable << "-char-|"
          << "--number-|-percent--|--number-|-percent--" << endl;
     for (int i = 0; i < MOD; ++i)
     {
-        cout << setw(4) << (char)('a' + i) << "  |"
-             << setw(9) << map_plain['a' + i] << "|"
-             << setw(10) << setprecision(3)
-             << (double)map_plain['a' + i] / plain_text.length() << "|"
-             << setw(9) << map_cypher['a' + i] << "|"
-             << setw(10) << setprecision(3)
-             << (double)map_cypher['a' + i] / cypher_text.length() << endl;
+        anatable << setw(4) << (char)('a' + i) << "  |"
+                 << setw(9) << map_plain['a' + i] << "|"
+                 << setw(10) << setprecision(3)
+                 << (double)map_plain['a' + i] / plain_text.length() << "|"
+                 << setw(9) << map_cypher['a' + i] << "|"
+                 << setw(10) << setprecision(3)
+                 << (double)map_cypher['a' + i] / cypher_text.length() << endl;
     }
+    Table = anatable.str();
+}
+string WordAnylasis::GetTable()
+{
+    return Table;
 }

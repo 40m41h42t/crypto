@@ -1,135 +1,156 @@
 #include "des.hpp"
 #include "global.hpp"
-#include <iostream>
-using namespace std;
-des::des() {}
-void des::debug()
-{
-    // string str = "1234567890";
-    // bitset<64> test = String2Bitset(str);
-    // cout << test << endl;
-    // GenerateKey();
-    string test = "123";
-    string temp = test.substr(0, 8);
-    cout << temp << endl;
-    cout << temp.length() << endl;
-}
-bitset<64> des::String2Bitset(string str)
-{
-    // This function changes an 8-length-string
-    // into a 64-size-bitset.
-    bitset<64> ret;
-    int count = 0;
-    for (int i = 0; i < str.length(); ++i)
-        for (int j = 0; j < 8; ++j)
-        {
-            ret[count] = (str.at(i) >> j) & 1;
-            count++;
-            if (count > 63)
-                return ret;
-        }
-    return ret;
-}
-bitset<28> des::LeftShift(bitset<28> bits, int times)
-{
-    return bits << (28 - times) | bits >> times;
-}
 void des::GenerateKey()
 {
-    Key = "12345678";
-    bitset<64> KeyBit64 = String2Bitset(Key);
-    bitset<56> KeyBit56;
+    /* 28 bits */
+    uint32_t C = 0, D = 0;
+    /* 56 bits */
+    uint64_t Bit56 = 0;
+    /*  PC-1 permutation */
+    //  Bits56[i] = Key64[PC-1[i]]
     for (int i = 0; i < 56; ++i)
-        // K_56[i] = K_64[PC_1[i]]
-        KeyBit56[55 - i] = KeyBit64[64 - PC_1[i]];
-    cout << KeyBit64 << endl;
-    cout << KeyBit56 << endl;
-    bitset<28> C, D;
-    for (int i = 0; i < 28; ++i)
     {
-        D[i] = KeyBit56[i];
-        C[i] = KeyBit56[i + 28];
+        Bit56 <<= 1;
+        Bit56 |= (Key >> (64 - PC1[i])) & LB64_MASK;
     }
-    for (int round = 0; round < 16; ++round)
+
+    C = (uint32_t)((Bit56 >> 28) & L28_MASK64);
+    D = (uint32_t)(Bit56 & L28_MASK64);
+
+    /* 16 rounds to generate SubKey */
+    for (int rounds = 0; rounds < 16; ++rounds)
     {
-        C = LeftShift(C, ShiftBits[round]);
-        D = LeftShift(D, ShiftBits[round]);
-        for (int i = 0; i < 56; ++i)
+        /*  In each round, C/D will LeftShift 
+            iteration_shift[rounds] times, then merge to
+            Bits56. After PC-2 permutation, Bit56 turns into
+            SubKey[rounds]
+        */
+
+        /* LeftShift */
+        for (int i = 0; i < iteration_shift[rounds]; ++i)
         {
-            KeyBit56[i] = D[i];
-            KeyBit56[i + 28] = C[i];
+            C = ((C << 1) & L28_MASK32) | ((C >> 27) & LB32_MASK);
+            D = ((D << 1) & L28_MASK32) | ((D >> 27) & LB32_MASK);
         }
+
+        /* Merged */
+        Bit56 = (((uint64_t)C << 28) | (uint64_t)D) & L56_MASK;
+        SubKey[rounds] = 0;
+
+        /* PC-2 permutation */
+        // SubKey[rounds][i] = Bit56[PC-2[i]]
         for (int i = 0; i < 48; ++i)
-            // SubKey[round][i] = KeyBit56[PC_2[i]]
-            SubKey[round][47 - i] = KeyBit56[56 - PC_2[i]];
+        {
+            SubKey[rounds] <<= 1;
+            SubKey[rounds] |= (Bit56 >> (56 - PC2[i])) & LB64_MASK;
+        }
     }
 }
-void des::Encrypt(string PlainText, string Key)
+uint32_t des::F_func(uint32_t R, int rounds)
 {
-    isPlainText = true;
+    /* 8 bits */
+    uint8_t row, col;
+
+    /* 32 bits */
+    uint32_t temp32 = 0;
+    uint32_t ret32 = 0;
+
+    /* 48 bits */
+    uint64_t Bits48 = 0;
+
+    /* E permutation */
+    // Bits48[i] = R[E[i]]
+    for (int i = 0; i < 48; ++i)
+    {
+        Bits48 <<= 1;
+        Bits48 |= (uint64_t)((R >> (32 - E[i])) & LB32_MASK);
+    }
+
+    // Bits48 ^ Key[rounds]
+    Bits48 = Bits48 ^ SubKey[rounds];
+
+    /* S-box permutation */
+    /*  In this Part, Bits48 will be departed to 8 parts: S1-S8,
+        each part has 6 bits: b1b2b3b4b5b6. b1b6 will be the row,
+        b2b3b4b5 will be the colomn. And number will be found in S-box.
+    */
+    for (int i = 0; i < 8; ++i)
+    {
+        // for 48 bit in uint64 is 0~12(departed to 6 parts),
+        // each time, row=(Bits48>>(42-6*i))&(100001B)
+        row = (uint8_t)(Bits48 >> (42 - 6 * i)) & 0x24;
+        row = (row >> 5) | (row & 0x01);
+        // colomn = (Bits48>>(42-6*i))&(1111B)
+        col = (uint8_t)(Bits48 >> (42 - 6 * i + 1)) & 0xf;
+
+        temp32 <<= 4;
+        temp32 |= (uint32_t)(S[i][16 * row + col] & 0xf);
+    }
+
+    /* P permutation */
+    // retlast[i] = retlast[P[i]]
+    for (int i = 0; i < 32; ++i)
+    {
+        ret32 <<= 1;
+        ret32 |= (temp32 >> (32 - P[i])) & LB32_MASK;
+    }
+    return ret32;
+}
+void des::Calc(uint64_t PlainText, uint64_t Key, char mode)
+{
+    /* 32 bits */
+    uint32_t L = 0, R = 0;
+    uint32_t temp32 = 0;
+
+    /* 64 bits */
+    uint64_t Bits64 = 0;
+
+    /* initial */
     this->PlainText = PlainText;
     this->Key = Key;
-    GenerateKey();
-    for (int i = 0; i < this->PlainText.length(); i += 8)
+    CypherText = 0;
+
+    /* IP permutation */
+    // Bits[i] = PlainText[IP[i]]
+    for (int i = 0; i < 64; ++i)
     {
-        string temp = this->PlainText.substr(i, 8);
-        // Get 64 bit block
-        bitset<64> TempBit64 = String2Bitset(temp);
-        // Start IP
-        bitset<64> AfterIP;
-        for (int j = 0; j < 64; ++j)
-            // AfterIP[i] = PlainText[IP[i]]
-            AfterIP[63 - j] = TempBit64[64 - IP[i]];
-        // +++++ +++++
-        //   R     L
-        bitset<32> L, R;
-        // Begin 16 times iterations
-        for (int j = 0; j < 32; ++j)
-        {
-            L[j] = AfterIP[j];
-            R[j] = AfterIP[j + 32];
-        }
-        // F function for 16 rounds
-        bitset<32> NextL;
-        for (int round = 0; round < 16; + round)
-        {
-            NextL = R;
-            R = F_Function(R, round) ^ L;
-            L = NextL;
-        }
+        Bits64 <<= 1;
+        Bits64 |= (PlainText >> (64 - IP[i])) & LB64_MASK;
+    }
+    L = (uint32_t)(Bits64 >> 32) & L32_MASK64;
+    R = (uint32_t)Bits64 & L32_MASK64;
+
+    /* Generate SubKeys: Lazy condition */
+    GenerateKey();
+
+    /* 16 rounds calculate */
+    for (int rounds = 0; rounds < 16; ++rounds)
+    {
+        // R_{i+1} = L_i ^ f(R_i, SubKey[i+1])
+        // TODO: wait for optimization
+        temp32 = R;
+        if (mode == 'e')
+            R = L ^ F_func(R, rounds);
+        if (mode == 'd')
+            R = L ^ F_func(R, 15 - rounds);
+        L = temp32;
+    }
+    Bits64 = 0;
+    Bits64 = ((uint64_t)R) << 32 | (uint64_t)L;
+
+    /* PI permutation */
+    // CypherText[i] = Bits64[PI[i]]
+    for (int i = 0; i < 64; ++i)
+    {
+        CypherText <<= 1;
+        CypherText |= (Bits64 >> (64 - PI[i])) & LB64_MASK;
     }
 }
-bitset<32> des::F_Function(bitset<32> Block, int round)
+uint64_t des::GetCypherText()
 {
-    bitset<48> ExpandBlock;
-    // 1. E function expand 32-bit block to 48-bit
-    for (int i = 0; i < 48; ++i)
-        // ExpandBlock[i] = Block[E[i]]
-        ExpandBlock[47 - i] = Block[32 - E[i]];
-    // 2. Do xor calc Block = Block ^ SubKey[round]
-    ExpandBlock = ExpandBlock ^ SubKey[round];
-    // ++++++ .... ++++++
-    // 654321 .... 654321
-    //   S8          S1
-    // 3. S-Box Replace, input 6-bit-data, output 4-bit-data
-    for (int i = 0, j = 0; i < 48; i += 6, j += 4)
-    {
-        // row = 16; col = 2345
-        int row = ExpandBlock[i] * 2 + ExpandBlock[i + 5];
-        int col = ExpandBlock[i + 1] * 8 + ExpandBlock[i + 2] * 4 + ExpandBlock[i + 3] * 2 + ExpandBlock[i + 4];
-        // Get Data in SBox
-        bitset<4> BitTemp(S_BOX[i / 6][row][col]);
-        // BitTemp ++++
-        // 1234 -> 4321
-        Block[31 - j] = BitTemp[3];
-        Block[31 - j - 1] = BitTemp[2];
-        Block[31 - j - 2] = BitTemp[1];
-        Block[31 - j - 3] = BitTemp[0];
-    }
-    // P replace function
-    bitset<32> TempBlock = Block;
-    for (int i = 0; i < 32; ++i)
-        // Block[i] = TempBlock[P[i]]
-        Block[31 - i] = TempBlock[32 - P[i]];
-    return Block;
+    return CypherText;
+}
+uint64_t des::GetPlainText()
+{
+    return PlainText;
 }

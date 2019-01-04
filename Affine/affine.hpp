@@ -2,8 +2,10 @@
 #define AFFINE_H
 #define MOD 26
 #include <string>
+#include <sstream>
 #include <map>
 using namespace std;
+
 class Affine
 {
   public:
@@ -31,11 +33,12 @@ class WordAnylasis
     void PlainTextAnylasis();
     void CypherTextAnylasis();
     void Anylasis();
+    string GetTable();
   private:
     string cypher_text;
     string plain_text;
+    string Table;
     char alphabet_plain[MOD], alphabet_cypher[MOD];
-    int num_plain[MOD], num_cypher[MOD];
     map<char, int> map_plain, map_cypher;
 };
 #endif
