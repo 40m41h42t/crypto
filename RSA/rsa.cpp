@@ -146,7 +146,7 @@ void rsa::Encrypt(string PlainText)
         HexStr += TempStr;
     }
     BN_hex2bn(&m, HexStr.c_str());
-    DebugOutPutBigNum(m);
+    // DebugOutPutBigNum(m);
     // text length (bits)
     int len = HexStr.length() * 4;
 
