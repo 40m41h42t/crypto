@@ -8,6 +8,7 @@ void menu()
 {
     cout << "1: encrypt" << endl
          << "2: decrypt" << endl
+         << "3: Millaer-Rabin" << endl
          << "other to quit" << endl;
 }
 int main()
@@ -81,14 +82,28 @@ int main()
             buffer_d << D_in.rdbuf();
             D_in.close();
             string D_str(buffer_d.str());
-            // cout << CipherText << endl
-            //      << D_str << endl
-            //      << N_str << endl;
             string PlainText = rsa_de.Decrypt(CipherText, D_str, N_str);
             cout << "[+] plain text will be saved in plain.txt" << endl;
             ofstream outPlain("plain.txt");
             outPlain << PlainText;
             outPlain.close();
+            break;
+        }
+        case 3:
+        {
+            rsa m_r;
+            cout << "Please input Number(dec)" << endl;
+            string mrNum;
+            cin >> mrNum;
+            bool flag = m_r.Miller_rabin(mrNum);
+            if (flag == true)
+            {
+                cout << "is prime" << endl;
+            }
+            else
+            {
+                cout << "not prime" << endl;
+            }
             break;
         }
         default:

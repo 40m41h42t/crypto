@@ -33,6 +33,8 @@ class rsa
     void Encrypt(string PlainText);
     void Decrypt(BIGNUM *CipherText, BIGNUM *PrivateKey, BIGNUM *outN);
     string Decrypt(string CipherText, string PrivateKey, string outN);
+    bool Miller_rabin(string InputNum);
+    bool Miller_rabin(BIGNUM *InputNum);
     string GetC();
     string GetM();
     string GetN();

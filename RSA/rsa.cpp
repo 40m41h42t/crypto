@@ -15,15 +15,10 @@ void rsa::debug()
     BIGNUM *bb = BN_new();
     BIGNUM *xx = BN_new();
     BIGNUM *yy = BN_new();
-    BN_dec2bn(&aa, "3");
-    BN_dec2bn(&bb, "220");
-    ExtGCD(aa, bb, xx, yy);
-    if (BN_cmp(zero, xx) == 1)
-    {
-        BN_add(xx, xx, bb);
-    }
-    DebugOutPutBigNum(xx);
-    DebugOutPutBigNum(yy);
+    BN_dec2bn(&bb, "7");
+    BN_dec2bn(&xx, "563");
+    BN_dec2bn(&yy, "561");
+    MODCalc(aa,bb,xx,yy);
 }
 rsa::rsa(string PlainText)
 {
@@ -155,8 +150,8 @@ void rsa::Encrypt(string PlainText)
     // generate prime p, q
     BIGNUM *p = BN_new();
     BIGNUM *q = BN_new();
-    BN_generate_prime_ex(p, len * 2, true, NULL, NULL, NULL);
-    BN_generate_prime_ex(q, len * 2, true, NULL, NULL, NULL);
+    BN_generate_prime_ex(p, len, true, NULL, NULL, NULL);
+    BN_generate_prime_ex(q, len, true, NULL, NULL, NULL);
 
     // n=p*q
     BN_mul(n, p, q, ctx);
@@ -196,10 +191,18 @@ void rsa::Encrypt(string PlainText)
 
     // c = m^e mod n
     MODCalc(c, m, e, n);
-    // if (BN_cmp(zero, c) == 1)
-    // {
-    //     BN_add(c, c, n);
-    // }
+    //
+    cout << "------------------ My RSA Info -------------------" << endl
+         << "PlainText: " << PlainText << endl
+         << "p : " << BN_bn2hex(p) << endl
+         << "q : " << BN_bn2hex(q) << endl
+         << "n : " << BN_bn2hex(n) << endl
+         << "Φn: " << BN_bn2hex(phi_n) << endl
+         << "e:  " << BN_bn2hex(e) << endl
+         << "d:  " << BN_bn2hex(d) << endl
+         << "---------------- Encryption Info ----------------" << endl
+         << "m:  " << BN_bn2hex(m) << endl
+         << "c:  " << BN_bn2hex(c) << endl;
 }
 string rsa::Decrypt(string CipherText, string PrivateKey, string outN)
 {
@@ -228,6 +231,12 @@ void rsa::Decrypt(BIGNUM *CipherText, BIGNUM *PrivateKey, BIGNUM *outN)
     }
     outPlainText = pplaintext;
     // DebugOutPutBigNum(PlainText);
+    cout << "---------------- Decryption Info ----------------" << endl
+         << "c: " << BN_bn2hex(CipherText) << endl
+         << "d: " << BN_bn2hex(PrivateKey) << endl
+         << "n: " << BN_bn2hex(outN) << endl
+         << "m: " << BN_bn2hex(PlainText) << endl
+         << "PlainText: " << pplaintext << endl;
 }
 string rsa::GetC()
 {
@@ -248,4 +257,78 @@ string rsa::GetE()
 string rsa::GetD()
 {
     return string(BN_bn2hex(d));
+}
+bool rsa::Miller_rabin(BIGNUM *InputNum)
+{
+    if (BN_is_zero(InputNum) == true)
+    {
+        cout << "By default I will generate a prime" << endl;
+        BN_generate_prime_ex(InputNum, 256, false, NULL, NULL, NULL);
+    }
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *two = BN_new();
+    BN_dec2bn(&two, "2");
+    if (BN_cmp(InputNum, two) == 0)
+    {
+        return true;
+    }
+    BIGNUM *temp = BN_new();
+    BN_mod(temp, InputNum, two, ctx);
+    if (BN_cmp(temp, zero) == 0)
+    {
+        return false;
+    }
+    BIGNUM *n_1 = BN_new();
+    BN_sub(n_1, InputNum, one);
+    BIGNUM *wr_k = BN_new();
+    BIGNUM *wr_m = BN_new();
+    BN_add(wr_m, n_1, zero);
+    while (true)
+    {
+        BN_div(wr_m, temp, wr_m, two, ctx);
+        if (BN_is_one(temp))
+        {
+            BN_mul(wr_m, wr_m, two, ctx);
+            break;
+        }
+        BN_add(wr_k, wr_k, one);
+    }
+    BN_one(temp);
+    BIGNUM *k_1 = BN_new();
+    BN_sub(k_1, wr_k, one);
+    BIGNUM *wr_b = BN_new();
+    BIGNUM *wr_z = BN_new();
+    cout << "---------- Miller-Rabin ----------" << endl
+         << "n: " << BN_bn2hex(InputNum) << endl
+         << "k: " << BN_bn2hex(wr_k) << endl
+         << "m: " << BN_bn2hex(wr_m) << endl;
+    for (int i = 0; i < 30; ++i)
+    {
+        BN_rand_range(wr_b, n_1);
+        MODCalc(wr_z, wr_b, wr_m, InputNum);
+
+        if (BN_is_one(wr_z) == true || BN_cmp(wr_z, n_1) == 0)
+        {
+            return true;
+        }
+        for (; BN_cmp(temp, k_1) == -1; BN_add(temp, temp, one))
+        {
+            if (BN_cmp(wr_z, k_1) == true)
+            {
+                return false;
+            }
+            MODCalc(wr_z, wr_z, two, InputNum);
+            if (BN_cmp(wr_z, n_1) == 0)
+            {
+                return true;
+            }
+        }
+    }
+    return true;
+}
+bool rsa::Miller_rabin(string InputNum)
+{
+    BIGNUM *mr_in = BN_new();
+    BN_dec2bn(&mr_in, InputNum.c_str());
+    return Miller_rabin(mr_in);
 }

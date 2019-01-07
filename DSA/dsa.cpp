@@ -108,6 +108,12 @@ void dsa::init()
     MODCalc(y, g, x, p);
     /* Public Key: (p,q,g,y) */
     /* Private Key: (x) */
+    cout << "--------- My DSA info ----------" << endl;
+    cout << "[+] p: " << BN_bn2hex(p) << endl;
+    cout << "[+] q: " << BN_bn2hex(q) << endl;
+    cout << "[+] g: " << BN_bn2hex(g) << endl;
+    cout << "[+] y: " << BN_bn2hex(y) << endl;
+    cout << "[+] x: " << BN_bn2hex(x) << endl;
 }
 void dsa::Signature(string PlainText)
 {
@@ -126,8 +132,6 @@ void dsa::Signature(string PlainText)
         HexStr += TempStr;
     }
     BN_hex2bn(&m, HexStr.c_str());
-    // cout << "1" << endl;
-    // calc
     unsigned char hash1[20];
     SHA_CTX sha;
     SHA1_Init(&sha);
@@ -157,27 +161,31 @@ void dsa::Signature(string PlainText)
     if (BN_cmp(zero, k_1) == 1)
         BN_add(k_1, k_1, q);
     BN_mul(s, x, r, ctx);
-    // TODO: change m to H(m)
     BN_add(s, s, SHA1_m);
     BN_mul(s, s, k_1, ctx);
     BN_mod(s, s, q, ctx);
     BN_free(k_1);
     BN_free(temp);
-    Check();
+    cout << "---------- Message info ----------" << endl;
+    cout << "[+] Message: " << PlainText << endl;
+    cout << "[+] Digest:  " << BN_bn2hex(SHA1_m) << endl;
+    cout << "[+] r:       " << BN_bn2hex(r) << endl;
+    cout << "[+] s:       " << BN_bn2hex(s) << endl;
+
 }
 void dsa::Check()
 {
     BN_CTX *ctx = BN_CTX_new();
     BIGNUM *w = BN_new();
     /* w=s^(-1)mod q */
-    // BIGNUM *s_1 = BN_new();
+
     BIGNUM *temp = BN_new();
     ExtGCD(s, q, w, temp);
     if (BN_cmp(zero, w) == 1)
         BN_add(w, w, q);
-    // BN_mod(w, s_1, q, ctx);
+
     output(w);
-    // output(s_1);
+
     /*
     u_1=H(m)w mod q
     u_2=rw mod q
@@ -194,17 +202,21 @@ void dsa::Check()
     BIGNUM *v = BN_new();
     MODCalc(temp, g, u_1, p);
     MODCalc(v, y, u_2, p);
-    BN_mul(v, v, temp,ctx);
+    BN_mul(v, v, temp, ctx);
     BN_mod(v, v, p, ctx);
     BN_mod(v, v, q, ctx);
-    // cout << BN_bn2hex(v) << endl;
-    // cout << BN_bn2hex(r) << endl;
+    cout << "---------- Verification info ----------" << endl;
+    cout<<"[+] w:  "<<BN_bn2hex(w)<<endl;
+    cout<<"[+] u1: "<<BN_bn2hex(u_1)<<endl;
+    cout<<"[+] u2: "<<BN_bn2hex(u_2)<<endl;
+    cout<<"[+] v:  "<<BN_bn2hex(v)<<endl;
+
     if (BN_cmp(v, r) == 0)
     {
-        cout << "OK" << endl;
+        cout << "[+][Verified] OK" << endl;
     }
     else
     {
-        cout << "fail" << endl;
+        cout << "[-][Verified] fail" << endl;
     }
 }
